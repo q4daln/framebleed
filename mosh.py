@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import shutil
+import struct
 import subprocess
 from pathlib import Path
 
@@ -19,6 +20,15 @@ def run(command: list[str]) -> None:
 
     if result.returncode != 0:
         raise SystemExit(f"\nCommand failed with exit code {result.returncode}")
+
+
+def run_capture(command: list[str]) -> str:
+    result = subprocess.run(command, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        raise SystemExit(result.stderr.strip())
+
+    return result.stdout
 
 
 def require_ffmpeg() -> None:
@@ -107,6 +117,143 @@ def concat_intermediates(first: Path, second: Path, output_path: Path) -> None:
     )
 
 
+def iframe_indexes(input_path: Path) -> list[int]:
+    output = run_capture(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "frame=best_effort_timestamp_time,pict_type,key_frame",
+            "-of",
+            "csv=p=0",
+            str(input_path),
+        ]
+    )
+
+    indexes: list[int] = []
+
+    for index, line in enumerate(output.splitlines()):
+        parts = line.split(",")
+
+        if len(parts) < 3:
+            continue
+
+        key_frame = parts[0]
+        pict_type = parts[2]
+
+        if key_frame == "1" and pict_type == "I":
+            indexes.append(index)
+
+    return indexes
+
+
+def is_video_chunk(chunk_id: bytes) -> bool:
+    return (
+        len(chunk_id) == 4 and chunk_id[:2].isdigit() and chunk_id[2:] in {b"dc", b"db"}
+    )
+
+
+def remove_avi_video_chunk(
+    input_path: Path, output_path: Path, video_chunk_index: int
+) -> None:
+    data = input_path.read_bytes()
+
+    if data[:4] != b"RIFF" or data[8:12] != b"AVI ":
+        raise SystemExit(f"Not an AVI file: {input_path}")
+
+    output = bytearray()
+    output.extend(data[:12])
+
+    position = 12
+    removed = False
+
+    while position + 8 <= len(data):
+        chunk_id = data[position : position + 4]
+        chunk_size = struct.unpack_from("<I", data, position + 4)[0]
+        chunk_body_start = position + 8
+        chunk_body_end = chunk_body_start + chunk_size
+        chunk_end = chunk_body_end + (chunk_size % 2)
+
+        if chunk_body_end > len(data):
+            raise SystemExit("AVI chunk parsing failed.")
+
+        if (
+            chunk_id == b"LIST"
+            and data[chunk_body_start : chunk_body_start + 4] == b"movi"
+        ):
+            new_body, removed = remove_chunk_from_movi(
+                data=data,
+                start=chunk_body_start,
+                end=chunk_body_end,
+                video_chunk_index=video_chunk_index,
+            )
+
+            output.extend(b"LIST")
+            output.extend(struct.pack("<I", len(new_body)))
+            output.extend(new_body)
+
+            if len(new_body) % 2:
+                output.extend(b"\x00")
+
+        elif chunk_id == b"idx1":
+            pass
+
+        else:
+            output.extend(data[position:chunk_end])
+
+        position = chunk_end
+
+    if not removed:
+        raise SystemExit(f"Could not remove video chunk index {video_chunk_index}")
+
+    struct.pack_into("<I", output, 4, len(output) - 8)
+    output_path.write_bytes(output)
+
+    print(f"\nRemoved video chunk index {video_chunk_index}: {output_path}")
+
+
+def remove_chunk_from_movi(
+    data: bytes,
+    start: int,
+    end: int,
+    video_chunk_index: int,
+) -> tuple[bytes, bool]:
+    output = bytearray()
+    output.extend(b"movi")
+
+    position = start + 4
+    current_video_chunk = 0
+    removed = False
+
+    while position + 8 <= end:
+        chunk_id = data[position : position + 4]
+        chunk_size = struct.unpack_from("<I", data, position + 4)[0]
+        chunk_body_start = position + 8
+        chunk_body_end = chunk_body_start + chunk_size
+        chunk_end = chunk_body_end + (chunk_size % 2)
+
+        if chunk_body_end > end:
+            break
+
+        if is_video_chunk(chunk_id):
+            if current_video_chunk == video_chunk_index:
+                removed = True
+            else:
+                output.extend(data[position:chunk_end])
+
+            current_video_chunk += 1
+
+        else:
+            output.extend(data[position:chunk_end])
+
+        position = chunk_end
+
+    return bytes(output), removed
+
+
 def export_mp4(input_path: Path, output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -114,6 +261,8 @@ def export_mp4(input_path: Path, output_path: Path) -> None:
         [
             "ffmpeg",
             "-y",
+            "-err_detect",
+            "ignore_err",
             "-fflags",
             "+genpts",
             "-i",
@@ -158,6 +307,12 @@ def parse_args() -> argparse.Namespace:
         help="Output file path.",
     )
 
+    parser.add_argument(
+        "--mosh",
+        action="store_true",
+        help="Remove the transition I-frame before export.",
+    )
+
     return parser.parse_args()
 
 
@@ -180,6 +335,7 @@ def main() -> None:
     a_intermediate = WORKING_DIR / "a.avi"
     b_intermediate = WORKING_DIR / "b.avi"
     joined = WORKING_DIR / "joined.avi"
+    moshed = WORKING_DIR / "moshed.avi"
 
     trim_to_intermediate(
         input_path=clip_a,
@@ -198,7 +354,20 @@ def main() -> None:
     )
 
     concat_intermediates(a_intermediate, b_intermediate, joined)
-    export_mp4(joined, output)
+
+    export_source = joined
+
+    if args.mosh:
+        indexes = iframe_indexes(joined)
+
+        if len(indexes) < 2:
+            raise SystemExit("Could not find a transition I-frame to remove.")
+
+        transition_iframe = indexes[1]
+        remove_avi_video_chunk(joined, moshed, transition_iframe)
+        export_source = moshed
+
+    export_mp4(export_source, output)
 
     print(f"\nDone. Exported: {output}")
 
