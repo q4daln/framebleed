@@ -216,3 +216,28 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Framebleed media/work folders
+input/*
+output/*
+working/*
+
+# Keep empty folders in Git
+!input/.gitkeep
+!output/.gitkeep
+!working/.gitkeep
+
+# Video/media files
+*.mp4
+*.mov
+*.m4v
+*.avi
+*.mkv
+*.webm
+*.wmv
+*.flv
+*.mpeg
+*.mpg
+*.wav
+*.mp3
+*.aac
