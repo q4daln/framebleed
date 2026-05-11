@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 ROOT = Path(__file__).resolve().parent.parent
 UPLOADS_DIR = ROOT / "uploads"
 OUTPUT_DIR = ROOT / "output"
+WORKING_DIR = ROOT / "working"
 STATIC_DIR = ROOT / "app" / "static"
 
 CLEANUP_MAX_AGE_SECONDS = 60 * 60
@@ -58,10 +59,12 @@ def health_check() -> dict[str, str]:
 def cleanup_generated_files() -> dict[str, int]:
     removed_upload_jobs = cleanup_job_folders(UPLOADS_DIR, max_age_seconds=0)
     removed_output_jobs = cleanup_job_folders(OUTPUT_DIR, max_age_seconds=0)
+    removed_working_jobs = cleanup_job_folders(WORKING_DIR, max_age_seconds=0)
 
     return {
         "removed_upload_jobs": removed_upload_jobs,
         "removed_output_jobs": removed_output_jobs,
+        "removed_working_jobs": removed_working_jobs,
     }
 
 
@@ -94,9 +97,11 @@ async def create_mosh(
 
     job_uploads_dir = UPLOADS_DIR / job_id
     job_output_dir = OUTPUT_DIR / job_id
+    job_working_dir = WORKING_DIR / job_id
 
     job_uploads_dir.mkdir(parents=True, exist_ok=True)
     job_output_dir.mkdir(parents=True, exist_ok=True)
+    job_working_dir.mkdir(parents=True, exist_ok=True)
 
     clip_a_path = job_uploads_dir / upload_filename(clip_a, "clip_a")
     clip_b_path = job_uploads_dir / upload_filename(clip_b, "clip_b")
@@ -124,6 +129,8 @@ async def create_mosh(
         resolution,
         "--output",
         str(output_path),
+        "--working-dir",
+        str(job_working_dir),
     ]
 
     if mosh:
@@ -242,6 +249,7 @@ def validate_time_range(start: float, end: float, label: str) -> None:
 def cleanup_old_generated_files() -> None:
     cleanup_job_folders(UPLOADS_DIR, CLEANUP_MAX_AGE_SECONDS)
     cleanup_job_folders(OUTPUT_DIR, CLEANUP_MAX_AGE_SECONDS)
+    cleanup_job_folders(WORKING_DIR, CLEANUP_MAX_AGE_SECONDS)
 
 
 def cleanup_job_folders(directory: Path, max_age_seconds: int) -> int:
