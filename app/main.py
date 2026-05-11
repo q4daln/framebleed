@@ -8,6 +8,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 ROOT = Path(__file__).resolve().parent.parent
 UPLOADS_DIR = ROOT / "uploads"
@@ -36,6 +37,7 @@ TIME_PATTERN = re.compile(
 PROCESS_LOCK = asyncio.Lock()
 
 app = FastAPI(title="framebleed")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 @app.get("/")
