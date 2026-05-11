@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-WORKING_DIR = ROOT / "working"
+DEFAULT_WORKING_DIR = ROOT / "working"
 
 
 def run(command: list[str]) -> None:
@@ -92,8 +92,13 @@ def trim_to_intermediate(
     run(command)
 
 
-def concat_intermediates(first: Path, second: Path, output_path: Path) -> None:
-    concat_file = WORKING_DIR / "concat.txt"
+def concat_intermediates(
+    first: Path,
+    second: Path,
+    output_path: Path,
+    working_dir: Path,
+) -> None:
+    concat_file = working_dir / "concat.txt"
 
     concat_file.write_text(
         f"file '{first.resolve()}'\nfile '{second.resolve()}'\n",
@@ -172,24 +177,34 @@ def choose_transition_iframe(joined: Path, a_intermediate: Path) -> int:
     expected_transition_index = video_frame_count(a_intermediate)
     iframes = iframe_indexes(joined)
 
-    candidates = [
-        iframe_index
-        for iframe_index in iframes
-        if iframe_index >= max(1, expected_transition_index - 3)
-    ]
+    candidates = [iframe_index for iframe_index in iframes if iframe_index != 0]
 
     if not candidates:
         raise SystemExit(
-            "Could not find an I-frame at the transition.\n"
+            "Could not find a transition I-frame.\n"
             f"Expected transition near frame: {expected_transition_index}\n"
             f"Joined I-frame indexes: {iframes}"
         )
 
-    selected = candidates[0]
+    selected = min(
+        candidates,
+        key=lambda iframe_index: abs(iframe_index - expected_transition_index),
+    )
+
+    distance = abs(selected - expected_transition_index)
+
+    if distance > 12:
+        raise SystemExit(
+            "Found I-frames, but none were close enough to the transition.\n"
+            f"Expected transition near frame: {expected_transition_index}\n"
+            f"Joined I-frame indexes: {iframes}\n"
+            f"Closest I-frame: {selected}"
+        )
 
     print(f"\nClip A frame count: {expected_transition_index}")
     print(f"Joined I-frame indexes: {iframes}")
     print(f"Selected transition I-frame: {selected}")
+    print(f"Distance from expected transition: {distance}")
 
     return selected
 
@@ -200,8 +215,11 @@ def is_video_chunk(chunk_id: bytes) -> bool:
     )
 
 
-def remove_avi_video_chunk(
-    input_path: Path, output_path: Path, video_chunk_index: int
+def remove_avi_video_chunks(
+    input_path: Path,
+    output_path: Path,
+    first_video_chunk_index: int,
+    last_video_chunk_index: int,
 ) -> None:
     data = input_path.read_bytes()
 
@@ -212,7 +230,7 @@ def remove_avi_video_chunk(
     output.extend(data[:12])
 
     position = 12
-    removed = False
+    removed_count = 0
 
     while position + 8 <= len(data):
         chunk_id = data[position : position + 4]
@@ -228,11 +246,12 @@ def remove_avi_video_chunk(
             chunk_id == b"LIST"
             and data[chunk_body_start : chunk_body_start + 4] == b"movi"
         ):
-            new_body, removed = remove_chunk_from_movi(
+            new_body, removed_count = remove_chunks_from_movi(
                 data=data,
                 start=chunk_body_start,
                 end=chunk_body_end,
-                video_chunk_index=video_chunk_index,
+                first_video_chunk_index=first_video_chunk_index,
+                last_video_chunk_index=last_video_chunk_index,
             )
 
             output.extend(b"LIST")
@@ -250,28 +269,34 @@ def remove_avi_video_chunk(
 
         position = chunk_end
 
-    if not removed:
-        raise SystemExit(f"Could not remove video chunk index {video_chunk_index}")
+    if removed_count == 0:
+        raise SystemExit(
+            f"Could not remove video chunks {first_video_chunk_index}-{last_video_chunk_index}"
+        )
 
     struct.pack_into("<I", output, 4, len(output) - 8)
     output_path.write_bytes(output)
 
-    print(f"Removed video chunk index: {video_chunk_index}")
+    print(
+        f"Removed video chunk indexes: {first_video_chunk_index}-{last_video_chunk_index} "
+        f"({removed_count} chunk(s))"
+    )
     print(f"Wrote moshed AVI: {output_path}")
 
 
-def remove_chunk_from_movi(
+def remove_chunks_from_movi(
     data: bytes,
     start: int,
     end: int,
-    video_chunk_index: int,
-) -> tuple[bytes, bool]:
+    first_video_chunk_index: int,
+    last_video_chunk_index: int,
+) -> tuple[bytes, int]:
     output = bytearray()
     output.extend(b"movi")
 
     position = start + 4
     current_video_chunk = 0
-    removed = False
+    removed_count = 0
 
     while position + 8 <= end:
         chunk_id = data[position : position + 4]
@@ -284,8 +309,12 @@ def remove_chunk_from_movi(
             break
 
         if is_video_chunk(chunk_id):
-            if current_video_chunk == video_chunk_index:
-                removed = True
+            should_remove = (
+                first_video_chunk_index <= current_video_chunk <= last_video_chunk_index
+            )
+
+            if should_remove:
+                removed_count += 1
             else:
                 output.extend(data[position:chunk_end])
 
@@ -296,7 +325,7 @@ def remove_chunk_from_movi(
 
         position = chunk_end
 
-    return bytes(output), removed
+    return bytes(output), removed_count
 
 
 def export_mp4(input_path: Path, output_path: Path) -> None:
@@ -353,6 +382,12 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--working-dir",
+        default=str(DEFAULT_WORKING_DIR),
+        help="Directory for temporary intermediate files.",
+    )
+
+    parser.add_argument(
         "--mosh",
         action="store_true",
         help="Remove the transition I-frame before export.",
@@ -368,6 +403,7 @@ def main() -> None:
     clip_a = Path(args.clip_a)
     clip_b = Path(args.clip_b)
     output = Path(args.output)
+    working_dir = Path(args.working_dir)
 
     if not clip_a.exists():
         raise SystemExit(f"Clip A does not exist: {clip_a}")
@@ -375,12 +411,12 @@ def main() -> None:
     if not clip_b.exists():
         raise SystemExit(f"Clip B does not exist: {clip_b}")
 
-    WORKING_DIR.mkdir(exist_ok=True)
+    working_dir.mkdir(parents=True, exist_ok=True)
 
-    a_intermediate = WORKING_DIR / "a.avi"
-    b_intermediate = WORKING_DIR / "b.avi"
-    joined = WORKING_DIR / "joined.avi"
-    moshed = WORKING_DIR / "moshed.avi"
+    a_intermediate = working_dir / "a.avi"
+    b_intermediate = working_dir / "b.avi"
+    joined = working_dir / "joined.avi"
+    moshed = working_dir / "moshed.avi"
 
     trim_to_intermediate(
         input_path=clip_a,
@@ -398,13 +434,20 @@ def main() -> None:
         resolution=args.resolution,
     )
 
-    concat_intermediates(a_intermediate, b_intermediate, joined)
+    concat_intermediates(
+        first=a_intermediate,
+        second=b_intermediate,
+        output_path=joined,
+        working_dir=working_dir,
+    )
 
     export_source = joined
 
     if args.mosh:
         transition_iframe = choose_transition_iframe(joined, a_intermediate)
-        remove_avi_video_chunk(joined, moshed, transition_iframe)
+        first_chunk = max(1, transition_iframe - 1)
+        last_chunk = transition_iframe + 1
+        remove_avi_video_chunks(joined, moshed, first_chunk, last_chunk)
         export_source = moshed
 
     export_mp4(export_source, output)
