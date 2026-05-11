@@ -241,3 +241,4 @@ working/*
 *.wav
 *.mp3
 *.aac
+.DS_Store
