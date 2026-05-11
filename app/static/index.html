@@ -421,15 +421,16 @@
                 generateButton.disabled = true;
 
                 try {
+                    const clipA = document.querySelector("#clip-a").files[0];
+                    const clipB = document.querySelector("#clip-b").files[0];
+
+                    if (!clipA || !clipB) {
+                        throw new Error("choose both clips first.");
+                    }
+
                     const formData = new FormData();
-                    formData.append(
-                        "clip_a",
-                        document.querySelector("#clip-a").files[0],
-                    );
-                    formData.append(
-                        "clip_b",
-                        document.querySelector("#clip-b").files[0],
-                    );
+                    formData.append("clip_a", clipA);
+                    formData.append("clip_b", clipB);
                     formData.append(
                         "a_start",
                         document.querySelector("#a-start").value,
@@ -463,8 +464,7 @@
                     });
 
                     if (!response.ok) {
-                        const errorText = await response.text();
-                        throw new Error(errorText);
+                        throw new Error(await readErrorMessage(response));
                     }
 
                     const blob = await response.blob();
@@ -498,6 +498,29 @@
 
                     video.src = URL.createObjectURL(file);
                 });
+            }
+
+            async function readErrorMessage(response) {
+                const contentType = response.headers.get("content-type") || "";
+
+                if (contentType.includes("application/json")) {
+                    const data = await response.json();
+
+                    if (typeof data.detail === "string") {
+                        return data.detail;
+                    }
+
+                    if (
+                        data.detail &&
+                        typeof data.detail.message === "string"
+                    ) {
+                        return data.detail.message;
+                    }
+
+                    return JSON.stringify(data);
+                }
+
+                return await response.text();
             }
 
             function secondsToTimestamp(seconds) {
