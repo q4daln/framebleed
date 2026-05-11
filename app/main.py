@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import re
+import shutil
 import subprocess
+import time
 import uuid
 from pathlib import Path
 
@@ -14,6 +16,8 @@ ROOT = Path(__file__).resolve().parent.parent
 UPLOADS_DIR = ROOT / "uploads"
 OUTPUT_DIR = ROOT / "output"
 STATIC_DIR = ROOT / "app" / "static"
+
+CLEANUP_MAX_AGE_SECONDS = 60 * 60
 
 ALLOWED_EXTENSIONS = {
     ".mov",
@@ -50,6 +54,17 @@ def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.post("/cleanup")
+def cleanup_generated_files() -> dict[str, int]:
+    removed_upload_jobs = cleanup_job_folders(UPLOADS_DIR, max_age_seconds=0)
+    removed_output_jobs = cleanup_job_folders(OUTPUT_DIR, max_age_seconds=0)
+
+    return {
+        "removed_upload_jobs": removed_upload_jobs,
+        "removed_output_jobs": removed_output_jobs,
+    }
+
+
 @app.post("/mosh")
 async def create_mosh(
     clip_a: UploadFile = File(...),
@@ -61,6 +76,8 @@ async def create_mosh(
     resolution: str = Form("1080p"),
     mosh: bool = Form(True),
 ) -> FileResponse:
+    cleanup_old_generated_files()
+
     validate_upload(clip_a, "clip a")
     validate_upload(clip_b, "clip b")
     validate_resolution(resolution)
@@ -220,3 +237,33 @@ def validate_time_range(start: float, end: float, label: str) -> None:
             status_code=400,
             detail=f"{label} must be at least 0.25 seconds long.",
         )
+
+
+def cleanup_old_generated_files() -> None:
+    cleanup_job_folders(UPLOADS_DIR, CLEANUP_MAX_AGE_SECONDS)
+    cleanup_job_folders(OUTPUT_DIR, CLEANUP_MAX_AGE_SECONDS)
+
+
+def cleanup_job_folders(directory: Path, max_age_seconds: int) -> int:
+    if not directory.exists():
+        return 0
+
+    now = time.time()
+    removed_count = 0
+
+    for path in directory.iterdir():
+        if path.name == ".gitkeep":
+            continue
+
+        if not path.is_dir():
+            continue
+
+        age_seconds = now - path.stat().st_mtime
+
+        if age_seconds < max_age_seconds:
+            continue
+
+        shutil.rmtree(path)
+        removed_count += 1
+
+    return removed_count
