@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 ROOT = Path(__file__).resolve().parent.parent
 UPLOADS_DIR = ROOT / "uploads"
 OUTPUT_DIR = ROOT / "output"
+STATIC_DIR = ROOT / "app" / "static"
 
 ALLOWED_EXTENSIONS = {
     ".mov",
@@ -27,8 +28,8 @@ app = FastAPI(title="framebleed")
 
 
 @app.get("/")
-def read_root() -> dict[str, str]:
-    return {"message": "framebleed backend is running"}
+def read_root() -> FileResponse:
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 @app.get("/health")

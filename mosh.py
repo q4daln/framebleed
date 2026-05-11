@@ -117,7 +117,7 @@ def concat_intermediates(first: Path, second: Path, output_path: Path) -> None:
     )
 
 
-def iframe_indexes(input_path: Path) -> list[int]:
+def frame_rows(input_path: Path) -> list[tuple[int, float | None, str, str]]:
     output = run_capture(
         [
             "ffprobe",
@@ -133,7 +133,7 @@ def iframe_indexes(input_path: Path) -> list[int]:
         ]
     )
 
-    indexes: list[int] = []
+    rows: list[tuple[int, float | None, str, str]] = []
 
     for index, line in enumerate(output.splitlines()):
         parts = line.split(",")
@@ -142,12 +142,56 @@ def iframe_indexes(input_path: Path) -> list[int]:
             continue
 
         key_frame = parts[0]
-        pict_type = parts[2]
 
+        try:
+            timestamp = float(parts[1])
+        except ValueError:
+            timestamp = None
+
+        pict_type = parts[2]
+        rows.append((index, timestamp, key_frame, pict_type))
+
+    return rows
+
+
+def video_frame_count(input_path: Path) -> int:
+    return len(frame_rows(input_path))
+
+
+def iframe_indexes(input_path: Path) -> list[int]:
+    indexes: list[int] = []
+
+    for index, _timestamp, key_frame, pict_type in frame_rows(input_path):
         if key_frame == "1" and pict_type == "I":
             indexes.append(index)
 
     return indexes
+
+
+def choose_transition_iframe(joined: Path, a_intermediate: Path) -> int:
+    expected_transition_index = video_frame_count(a_intermediate)
+    iframes = iframe_indexes(joined)
+
+    candidates = [
+        iframe_index
+        for iframe_index in iframes
+        if iframe_index >= max(1, expected_transition_index - 3)
+    ]
+
+    if not candidates:
+        raise SystemExit(
+            "Could not find an I-frame at the transition.\n"
+            f"Expected transition near frame: {expected_transition_index}\n"
+            f"Joined I-frame indexes: {iframes}"
+        )
+
+    selected = candidates[0]
+
+    print(f"\nClip A frame count: {expected_transition_index}")
+    print(f"Joined I-frame indexes: {iframes}")
+    print(f"Selected transition I-frame: {selected}")
+
+    return selected
 
 
 def is_video_chunk(chunk_id: bytes) -> bool:
@@ -212,7 +256,8 @@ def remove_avi_video_chunk(
     struct.pack_into("<I", output, 4, len(output) - 8)
     output_path.write_bytes(output)
 
-    print(f"\nRemoved video chunk index {video_chunk_index}: {output_path}")
+    print(f"Removed video chunk index: {video_chunk_index}")
+    print(f"Wrote moshed AVI: {output_path}")
 
 
 def remove_chunk_from_movi(
@@ -358,12 +403,7 @@ def main() -> None:
     export_source = joined
 
     if args.mosh:
-        indexes = iframe_indexes(joined)
-
-        if len(indexes) < 2:
-            raise SystemExit("Could not find a transition I-frame to remove.")
-
-        transition_iframe = indexes[1]
+        transition_iframe = choose_transition_iframe(joined, a_intermediate)
         remove_avi_video_chunk(joined, moshed, transition_iframe)
         export_source = moshed
 
