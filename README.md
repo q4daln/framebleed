@@ -2,12 +2,17 @@
 
 local datamosh experiment.
 
-right now this is just a python cli that:
+framebleed is a local web app for cutting two clips together and generating a basic datamosh transition between them.
 
-- trims two clips
-- joins them together
-- exports a clean mp4
-- removes the transition i-frame for a basic datamosh effect
+currently it can:
+
+- upload two local video clips
+- preview both clips in the browser
+- choose start/end points for each clip
+- generate a clean stitched mp4
+- generate a datamoshed mp4
+- preview/download the result
+- validate clip time ranges before processing
 
 ## setup
 
@@ -19,28 +24,45 @@ on mac:
 brew install ffmpeg
 ```
 
-optional venv:
+create and activate a venv:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-## usage
+install python deps:
 
-put two test clips in `input/`:
+```bash
+python3 -m pip install -r requirements.txt
+```
+
+## run
+
+start the local backend:
+
+```bash
+uvicorn app.main:app --reload
+```
+
+then open:
 
 ```txt
-input/a.mov
-input/b.mov
+http://127.0.0.1:8000
 ```
+
+videos are processed locally on your machine.
+
+## cli
+
+the original cli still works.
 
 clean export:
 
 ```bash
 python3 mosh.py \
-  --clip-a input/a.mov \
-  --clip-b input/b.mov \
+  --clip-a input/a.MOV \
+  --clip-b input/b.MOV \
   --a-start 00:00:00 \
   --a-end 00:00:03 \
   --b-start 00:00:00 \
@@ -53,8 +75,8 @@ datamosh export:
 
 ```bash
 python3 mosh.py \
-  --clip-a input/a.mov \
-  --clip-b input/b.mov \
+  --clip-a input/a.MOV \
+  --clip-b input/b.MOV \
   --a-start 00:00:00 \
   --a-end 00:00:03 \
   --b-start 00:00:00 \
@@ -64,10 +86,25 @@ python3 mosh.py \
   --mosh
 ```
 
-## goal
+## project structure
 
-eventually this should become a local web app where you can upload two clips, preview them, choose start/end points, generate a datamosh transition, and export the result.
+```txt
+app/
+  main.py
+  static/
+    index.html
 
-## note
+input/
+output/
+uploads/
+working/
 
-test footage and generated videos are ignored by git.
+mosh.py
+requirements.txt
+```
+
+## notes
+
+test footage, uploads, generated outputs, and temporary working files are ignored by git.
+
+this is still experimental. the next goal is to clean up the frontend files and improve the clip selection ui.
