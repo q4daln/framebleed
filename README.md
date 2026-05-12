@@ -2,7 +2,7 @@
 
 framebleed is an experimental local-first datamosh tool for creating glitch transitions between two video clips.
 
-it runs as a local web app: you choose two clips, preview them in the browser, set start/end points, generate a clean or datamoshed transition, and export the result as an mp4.
+it runs as a local web app: you choose two clips, preview them in the browser, set start/end points, generate a datamoshed transition, and export the result as an mp4.
 
 ## status
 
@@ -14,10 +14,13 @@ currently supports:
 - two-clip upload
 - browser preview for both clips
 - custom start/end points
+- current time and duration display
+- selected start/end preview controls
 - clean stitched exports
 - datamoshed transition exports
 - mp4 output preview/download
 - backend time validation
+- frontend time validation
 - generated job cleanup
 - per-job working folders
 
@@ -53,13 +56,19 @@ python3 -m pip install -r requirements.txt
 start the local app:
 
 ```bash
-uvicorn app.main:app --reload
+python3 run.py
 ```
 
-open:
+the app opens at:
 
 ```txt
 http://127.0.0.1:8000
+```
+
+you can also run the backend directly:
+
+```bash
+uvicorn app.main:app --reload
 ```
 
 the app runs locally. videos are processed on your machine.
@@ -70,9 +79,8 @@ the app runs locally. videos are processed on your machine.
 2. choose clip b
 3. preview both clips
 4. set start/end points for each clip
-5. choose clean stitch or datamosh transition
-6. generate
-7. preview or download the mp4
+5. generate the datamosh transition
+6. preview or download the mp4
 
 ## cli
 
@@ -148,6 +156,7 @@ working/
 
 mosh.py
 requirements.txt
+run.py
 ```
 
 ## how it works
