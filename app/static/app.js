@@ -250,12 +250,15 @@ function timestampToSeconds(value) {
 }
 
 function secondsToTimestamp(seconds) {
-  const safeSeconds = Number.isFinite(seconds) ? seconds : 0;
-  const wholeSeconds = Math.floor(safeSeconds);
+  const safeSeconds = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
+  const totalMilliseconds = Math.round(safeSeconds * 1000);
+
+  const wholeSeconds = Math.floor(totalMilliseconds / 1000);
+  const milliseconds = totalMilliseconds % 1000;
+
   const hours = Math.floor(wholeSeconds / 3600);
   const minutes = Math.floor((wholeSeconds % 3600) / 60);
   const secs = wholeSeconds % 60;
-  const milliseconds = Math.round((safeSeconds - wholeSeconds) * 1000);
 
   const base = [
     hours.toString().padStart(2, "0"),

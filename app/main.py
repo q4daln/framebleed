@@ -56,10 +56,11 @@ def health_check() -> dict[str, str]:
 
 
 @app.post("/cleanup")
-def cleanup_generated_files() -> dict[str, int]:
-    removed_upload_jobs = cleanup_job_folders(UPLOADS_DIR, max_age_seconds=0)
-    removed_output_jobs = cleanup_job_folders(OUTPUT_DIR, max_age_seconds=0)
-    removed_working_jobs = cleanup_job_folders(WORKING_DIR, max_age_seconds=0)
+async def cleanup_generated_files() -> dict[str, int]:
+    async with PROCESS_LOCK:
+        removed_upload_jobs = cleanup_job_folders(UPLOADS_DIR, max_age_seconds=0)
+        removed_output_jobs = cleanup_job_folders(OUTPUT_DIR, max_age_seconds=0)
+        removed_working_jobs = cleanup_job_folders(WORKING_DIR, max_age_seconds=0)
 
     return {
         "removed_upload_jobs": removed_upload_jobs,
