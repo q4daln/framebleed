@@ -1,37 +1,48 @@
 # framebleed
 
-local datamosh experiment.
+framebleed is an experimental local-first datamosh tool for creating glitch transitions between two video clips.
 
-framebleed is a local web app for cutting two clips together and generating a basic datamosh transition between them.
+it runs as a local web app: you choose two clips, preview them in the browser, set start/end points, generate a clean or datamoshed transition, and export the result as an mp4.
 
-currently it can:
+## status
 
-- upload two local video clips
-- preview both clips in the browser
-- choose start/end points for each clip
-- generate a clean stitched mp4
-- generate a datamoshed mp4
-- preview/download the result
-- validate clip time ranges before processing
+experimental, but working.
 
-## setup
+currently supports:
 
-requires python and ffmpeg.
+- local web ui
+- two-clip upload
+- browser preview for both clips
+- custom start/end points
+- clean stitched exports
+- datamoshed transition exports
+- mp4 output preview/download
+- backend time validation
+- generated job cleanup
+- per-job working folders
 
-on mac:
+## requirements
+
+- python 3
+- ffmpeg
+- ffprobe
+
+on macos:
 
 ```bash
 brew install ffmpeg
 ```
 
-create and activate a venv:
+## setup
+
+create and activate a virtual environment:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-install python deps:
+install dependencies:
 
 ```bash
 python3 -m pip install -r requirements.txt
@@ -39,23 +50,33 @@ python3 -m pip install -r requirements.txt
 
 ## run
 
-start the local backend:
+start the local app:
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-then open:
+open:
 
 ```txt
 http://127.0.0.1:8000
 ```
 
-videos are processed locally on your machine.
+the app runs locally. videos are processed on your machine.
+
+## usage
+
+1. choose clip a
+2. choose clip b
+3. preview both clips
+4. set start/end points for each clip
+5. choose clean stitch or datamosh transition
+6. generate
+7. preview or download the mp4
 
 ## cli
 
-the original cli still works.
+the core engine can also be run directly from the command line.
 
 clean export:
 
@@ -86,25 +107,101 @@ python3 mosh.py \
   --mosh
 ```
 
+custom working directory:
+
+```bash
+python3 mosh.py \
+  --clip-a input/a.MOV \
+  --clip-b input/b.MOV \
+  --a-start 00:00:01 \
+  --a-end 00:00:04 \
+  --b-start 00:00:01 \
+  --b-end 00:00:04 \
+  --resolution 1080p \
+  --output output/custom_mosh.mp4 \
+  --working-dir working/custom-job \
+  --mosh
+```
+
 ## project structure
 
 ```txt
 app/
+  __init__.py
   main.py
   static/
+    app.js
     index.html
+    styles.css
 
 input/
+  .gitkeep
+
 output/
+  .gitkeep
+
 uploads/
+  .gitkeep
+
 working/
+  .gitkeep
 
 mosh.py
 requirements.txt
 ```
 
+## how it works
+
+framebleed uses ffmpeg to trim and normalize both clips into temporary avi files.
+
+for datamosh exports, it identifies the transition i-frame between clip a and clip b, removes a small window around that transition frame, then re-exports the result as an mp4.
+
+temporary files are stored in per-job folders under:
+
+```txt
+uploads/
+output/
+working/
+```
+
+generated media and temporary files are ignored by git.
+
+## cleanup
+
+the backend includes a cleanup endpoint for generated job folders:
+
+```txt
+http://127.0.0.1:8000/docs
+```
+
+from there, run:
+
+```txt
+post /cleanup
+```
+
+this removes generated job folders from:
+
+```txt
+uploads/
+output/
+working/
+```
+
+while keeping the tracked `.gitkeep` files.
+
+## security / privacy
+
+framebleed is designed to run locally. uploaded clips are saved and processed on your own machine.
+
+do not deploy this publicly without adding upload limits, rate limiting, authentication, job timeouts, and stronger cleanup/sandboxing.
+
 ## notes
 
-test footage, uploads, generated outputs, and temporary working files are ignored by git.
+this is still experimental.
 
-this is still experimental. the next goal is to clean up the frontend files and improve the clip selection ui.
+the current focus is a clean local workflow for creating two-clip datamosh transitions. future work may include better timeline controls, cleaner result management, stronger datamosh controls, and packaging for easier local installation.
+
+## license
+
+mit
