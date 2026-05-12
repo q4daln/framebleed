@@ -4,6 +4,12 @@ framebleed is an experimental local-first datamosh tool for creating glitch tran
 
 it runs as a local web app: you choose two clips, preview them in the browser, set start/end points, generate a datamoshed transition, and export the result as an mp4.
 
+## screenshots
+
+![framebleed clip selection ui](assets/framebleed_ui1.png)
+
+![framebleed result ui](assets/framebleed_ui2.png)
+
 ## status
 
 experimental, but working.
@@ -141,6 +147,10 @@ app/
     app.js
     index.html
     styles.css
+
+assets/
+  framebleed_ui1.png
+  framebleed_ui2.png
 
 input/
   .gitkeep
