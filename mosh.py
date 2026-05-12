@@ -101,7 +101,7 @@ def concat_intermediates(
     concat_file = working_dir / "concat.txt"
 
     concat_file.write_text(
-        f"file '{first.resolve()}'\nfile '{second.resolve()}'\n",
+        f"file {concat_file_path(first)}\nfile {concat_file_path(second)}\n",
         encoding="utf-8",
     )
 
@@ -120,6 +120,17 @@ def concat_intermediates(
             str(output_path),
         ]
     )
+
+
+def concat_file_path(path: Path) -> str:
+    resolved = str(path.resolve())
+
+    if "\n" in resolved or "\r" in resolved:
+        raise SystemExit(f"Path contains unsupported newline characters: {resolved}")
+
+    escaped = resolved.replace("'", r"'\''")
+
+    return f"'{escaped}'"
 
 
 def frame_rows(input_path: Path) -> list[tuple[int, float | None, str, str]]:

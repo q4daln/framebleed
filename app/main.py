@@ -80,8 +80,6 @@ async def create_mosh(
     resolution: str = Form("1080p"),
     mosh: bool = Form(True),
 ) -> FileResponse:
-    cleanup_old_generated_files()
-
     validate_upload(clip_a, "clip a")
     validate_upload(clip_b, "clip b")
     validate_resolution(resolution)
@@ -94,50 +92,52 @@ async def create_mosh(
     validate_time_range(a_start_seconds, a_end_seconds, "clip a")
     validate_time_range(b_start_seconds, b_end_seconds, "clip b")
 
-    job_id = uuid.uuid4().hex
-
-    job_uploads_dir = UPLOADS_DIR / job_id
-    job_output_dir = OUTPUT_DIR / job_id
-    job_working_dir = WORKING_DIR / job_id
-
-    job_uploads_dir.mkdir(parents=True, exist_ok=True)
-    job_output_dir.mkdir(parents=True, exist_ok=True)
-    job_working_dir.mkdir(parents=True, exist_ok=True)
-
-    clip_a_path = job_uploads_dir / upload_filename(clip_a, "clip_a")
-    clip_b_path = job_uploads_dir / upload_filename(clip_b, "clip_b")
-    output_path = job_output_dir / "result.mp4"
-
-    await save_upload(clip_a, clip_a_path)
-    await save_upload(clip_b, clip_b_path)
-
-    command = [
-        "python3",
-        str(ROOT / "mosh.py"),
-        "--clip-a",
-        str(clip_a_path),
-        "--clip-b",
-        str(clip_b_path),
-        "--a-start",
-        a_start,
-        "--a-end",
-        a_end,
-        "--b-start",
-        b_start,
-        "--b-end",
-        b_end,
-        "--resolution",
-        resolution,
-        "--output",
-        str(output_path),
-        "--working-dir",
-        str(job_working_dir),
-    ]
-
-    if mosh:
-        command.append("--mosh")
-
     async with PROCESS_LOCK:
+        cleanup_old_generated_files()
+
+        job_id = uuid.uuid4().hex
+
+        job_uploads_dir = UPLOADS_DIR / job_id
+        job_output_dir = OUTPUT_DIR / job_id
+        job_working_dir = WORKING_DIR / job_id
+
+        job_uploads_dir.mkdir(parents=True, exist_ok=True)
+        job_output_dir.mkdir(parents=True, exist_ok=True)
+        job_working_dir.mkdir(parents=True, exist_ok=True)
+
+        clip_a_path = job_uploads_dir / upload_filename(clip_a, "clip_a")
+        clip_b_path = job_uploads_dir / upload_filename(clip_b, "clip_b")
+        output_path = job_output_dir / "result.mp4"
+
+        await save_upload(clip_a, clip_a_path)
+        await save_upload(clip_b, clip_b_path)
+
+        command = [
+            "python3",
+            str(ROOT / "mosh.py"),
+            "--clip-a",
+            str(clip_a_path),
+            "--clip-b",
+            str(clip_b_path),
+            "--a-start",
+            a_start,
+            "--a-end",
+            a_end,
+            "--b-start",
+            b_start,
+            "--b-end",
+            b_end,
+            "--resolution",
+            resolution,
+            "--output",
+            str(output_path),
+            "--working-dir",
+            str(job_working_dir),
+        ]
+
+        if mosh:
+            command.append("--mosh")
+
         result = await asyncio.to_thread(
             subprocess.run,
             command,
@@ -146,21 +146,21 @@ async def create_mosh(
             text=True,
         )
 
-    if result.returncode != 0:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "framebleed failed to process the video",
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-            },
-        )
+        if result.returncode != 0:
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "message": "framebleed failed to process the video",
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
+                },
+            )
 
-    if not output_path.exists():
-        raise HTTPException(
-            status_code=500,
-            detail="framebleed finished but no output file was created",
-        )
+        if not output_path.exists():
+            raise HTTPException(
+                status_code=500,
+                detail="framebleed finished but no output file was created",
+            )
 
     return FileResponse(
         path=output_path,
