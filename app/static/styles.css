@@ -120,11 +120,30 @@ input[type="checkbox"] {
     accent-color: var(--accent);
 }
 
+.metadata-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.metadata-row strong {
+    color: var(--text);
+    font-weight: 500;
+}
+
 .time-row {
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 8px;
     align-items: end;
+}
+
+.button-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
 }
 
 button {
@@ -211,5 +230,14 @@ footer {
     main {
         width: min(100vw - 20px, 1180px);
         padding-top: 20px;
+    }
+
+    .button-row {
+        grid-template-columns: 1fr;
+    }
+
+    .metadata-row {
+        display: grid;
+        gap: 4px;
     }
 }

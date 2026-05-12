@@ -32,6 +32,19 @@
                         <div class="controls">
                             <video id="preview-a" controls></video>
 
+                            <div class="metadata-row">
+                                <span
+                                    >current:
+                                    <strong id="current-a"
+                                        >00:00:00</strong
+                                    ></span
+                                >
+                                <span
+                                    >duration:
+                                    <strong id="duration-a">--:--</strong></span
+                                >
+                            </div>
+
                             <div class="time-row">
                                 <label>
                                     start
@@ -71,6 +84,30 @@
                                     set
                                 </button>
                             </div>
+
+                            <div class="button-row">
+                                <button
+                                    type="button"
+                                    data-jump-time="a-start"
+                                    data-video="preview-a"
+                                >
+                                    preview start
+                                </button>
+                                <button
+                                    type="button"
+                                    data-jump-time="a-end"
+                                    data-video="preview-a"
+                                >
+                                    preview end
+                                </button>
+                                <button
+                                    type="button"
+                                    data-full-range="a"
+                                    data-video="preview-a"
+                                >
+                                    full range
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -90,6 +127,19 @@
 
                         <div class="controls">
                             <video id="preview-b" controls></video>
+
+                            <div class="metadata-row">
+                                <span
+                                    >current:
+                                    <strong id="current-b"
+                                        >00:00:00</strong
+                                    ></span
+                                >
+                                <span
+                                    >duration:
+                                    <strong id="duration-b">--:--</strong></span
+                                >
+                            </div>
 
                             <div class="time-row">
                                 <label>
@@ -128,6 +178,30 @@
                                     data-video="preview-b"
                                 >
                                     set
+                                </button>
+                            </div>
+
+                            <div class="button-row">
+                                <button
+                                    type="button"
+                                    data-jump-time="b-start"
+                                    data-video="preview-b"
+                                >
+                                    preview start
+                                </button>
+                                <button
+                                    type="button"
+                                    data-jump-time="b-end"
+                                    data-video="preview-b"
+                                >
+                                    preview end
+                                </button>
+                                <button
+                                    type="button"
+                                    data-full-range="b"
+                                    data-video="preview-b"
+                                >
+                                    full range
                                 </button>
                             </div>
                         </div>
