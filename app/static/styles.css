@@ -146,7 +146,8 @@ input[type="checkbox"] {
     gap: 8px;
 }
 
-button {
+button,
+.button-link {
     min-height: 38px;
     border: 1px solid var(--line);
     border-radius: 10px;
@@ -156,7 +157,8 @@ button {
     cursor: pointer;
 }
 
-button:hover {
+button:hover,
+.button-link:hover {
     border-color: #444;
 }
 
@@ -171,6 +173,13 @@ button.primary {
 button:disabled {
     opacity: 0.55;
     cursor: not-allowed;
+}
+
+.button-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
 }
 
 .settings {
@@ -192,6 +201,21 @@ button:disabled {
     margin-top: 16px;
 }
 
+.output-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.output-header h2 {
+    margin-bottom: 4px;
+}
+
+.output-header p {
+    font-size: 13px;
+}
+
 .status {
     margin-top: 12px;
     min-height: 24px;
@@ -204,15 +228,20 @@ button:disabled {
     white-space: pre-wrap;
 }
 
-.download {
-    display: inline-block;
+.result-wrap {
+    display: grid;
+    gap: 12px;
     margin-top: 12px;
-    color: var(--accent);
-    text-decoration: none;
 }
 
-.download:hover {
-    text-decoration: underline;
+.result-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.result-actions > * {
+    flex: 1;
 }
 
 footer {
@@ -239,5 +268,9 @@ footer {
     .metadata-row {
         display: grid;
         gap: 4px;
+    }
+
+    .result-actions {
+        display: grid;
     }
 }

@@ -1,8 +1,11 @@
 const form = document.querySelector("#mosh-form");
 const statusEl = document.querySelector("#status");
 const generateButton = document.querySelector("#generate");
+const resultWrap = document.querySelector("#result-wrap");
 const resultVideo = document.querySelector("#result");
 const downloadLink = document.querySelector("#download");
+const clearResultButton = document.querySelector("#clear-result");
+const resultNote = document.querySelector("#result-note");
 
 let resultUrl = null;
 
@@ -65,11 +68,17 @@ document.querySelectorAll("[data-full-range]").forEach((button) => {
   });
 });
 
+clearResultButton.addEventListener("click", () => {
+  clearResult();
+  setStatus("");
+});
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   clearResult();
   setStatus("processing...");
+  resultNote.textContent = "processing local video files...";
   generateButton.disabled = true;
 
   try {
@@ -109,14 +118,15 @@ form.addEventListener("submit", async (event) => {
     resultUrl = URL.createObjectURL(blob);
 
     resultVideo.src = resultUrl;
-    resultVideo.hidden = false;
+    resultWrap.hidden = false;
 
     downloadLink.href = resultUrl;
-    downloadLink.hidden = false;
 
     setStatus("done.");
+    resultNote.textContent = "result ready.";
   } catch (error) {
     setStatus(error.message || "something went wrong.", true);
+    resultNote.textContent = "generation failed.";
   } finally {
     generateButton.disabled = false;
   }
@@ -271,9 +281,9 @@ function clearResult() {
     resultUrl = null;
   }
 
-  resultVideo.hidden = true;
+  resultWrap.hidden = true;
   resultVideo.removeAttribute("src");
 
-  downloadLink.hidden = true;
   downloadLink.removeAttribute("href");
+  resultNote.textContent = "generate a transition to preview it here.";
 }

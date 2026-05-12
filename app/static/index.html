@@ -225,19 +225,36 @@
                 </section>
 
                 <section class="panel output">
+                    <div class="output-header">
+                        <div>
+                            <h2>result</h2>
+                            <p id="result-note">
+                                generate a transition to preview it here.
+                            </p>
+                        </div>
+                    </div>
+
                     <button id="generate" class="primary" type="submit">
-                        generate
+                        generate datamosh
                     </button>
                     <div id="status" class="status"></div>
-                    <video id="result" controls hidden></video>
-                    <a
-                        id="download"
-                        class="download"
-                        href="#"
-                        download="framebleed.mp4"
-                        hidden
-                        >download mp4</a
-                    >
+
+                    <div id="result-wrap" class="result-wrap" hidden>
+                        <video id="result" controls></video>
+
+                        <div class="result-actions">
+                            <a
+                                id="download"
+                                class="button-link"
+                                href="#"
+                                download="framebleed.mp4"
+                                >download mp4</a
+                            >
+                            <button id="clear-result" type="button">
+                                clear result
+                            </button>
+                        </div>
+                    </div>
                 </section>
             </form>
 
