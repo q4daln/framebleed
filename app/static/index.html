@@ -3,14 +3,25 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#080808" />
+        <meta name="color-scheme" content="dark" />
         <title>framebleed</title>
+
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&amp;display=swap"
+            rel="stylesheet"
+        />
+
         <link rel="stylesheet" href="/static/styles.css" />
     </head>
     <body>
         <main>
-            <header>
-                <h1>framebleed</h1>
-                <p>local datamosh experiment</p>
+            <header class="intro">
+                <p class="logo">~/framebleed</p>
+                <h1><span>frame</span>bleed</h1>
+                <p class="tagline">local datamosh transition tool</p>
             </header>
 
             <form id="mosh-form">
@@ -259,8 +270,8 @@
             </form>
 
             <footer>
-                videos are processed locally by the backend running on this
-                machine.
+                <span>local-first</span>
+                <span>videos stay on this machine</span>
             </footer>
         </main>
 
