@@ -42,13 +42,41 @@ on macos:
 brew install ffmpeg
 ```
 
+on windows, install ffmpeg and make sure both commands work in powershell:
+
+```powershell
+ffmpeg -version
+ffprobe -version
+```
+
+one common windows install option is:
+
+```powershell
+winget install Gyan.FFmpeg
+```
+
 ## setup
 
-create and activate a virtual environment:
+create and activate a virtual environment.
+
+macos / linux:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
+```
+
+windows powershell:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+if powershell blocks activation, you may need:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
 install dependencies:
@@ -57,12 +85,24 @@ install dependencies:
 python3 -m pip install -r requirements.txt
 ```
 
+on windows, use:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
 ## run
 
 start the local app:
 
 ```bash
 python3 run.py
+```
+
+on windows, use:
+
+```powershell
+python run.py
 ```
 
 the app opens at:
@@ -209,6 +249,15 @@ working/
 
 while keeping the tracked `.gitkeep` files.
 
+## known limitations
+
+- audio is not included in exports yet.
+- some codecs, variable-frame-rate footage, or unusual containers may behave unpredictably.
+- large clips may take a while to process and can use significant disk, cpu, and memory.
+- currently supports a two-clip workflow only.
+- ffmpeg and ffprobe must be installed and available in your path.
+- designed for local use, not public server deployment.
+
 ## security / privacy
 
 framebleed is designed to run locally. uploaded clips are saved and processed on your own machine.
@@ -219,7 +268,7 @@ do not deploy this publicly without adding upload limits, rate limiting, authent
 
 this is still experimental.
 
-the current focus is a clean local workflow for creating two-clip datamosh transitions. future work may include better timeline controls, cleaner result management, stronger datamosh controls, and packaging for easier local installation.
+the current focus is a clean local workflow for creating two-clip datamosh transitions. future work may include better timeline controls, cleaner result management, stronger datamosh controls, audio support, and packaging for easier local installation.
 
 ## license
 
