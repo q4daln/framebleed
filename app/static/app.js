@@ -9,6 +9,11 @@ const resultNote = document.querySelector("#result-note");
 
 let resultUrl = null;
 
+const previewUrls = {
+  "clip-a": null,
+  "clip-b": null,
+};
+
 bindPreview({
   inputId: "clip-a",
   videoId: "preview-a",
@@ -150,6 +155,11 @@ function bindPreview({
   input.addEventListener("change", () => {
     const file = input.files[0];
 
+    if (previewUrls[inputId]) {
+      URL.revokeObjectURL(previewUrls[inputId]);
+      previewUrls[inputId] = null;
+    }
+
     if (!file) {
       video.removeAttribute("src");
       current.textContent = "00:00:00";
@@ -159,7 +169,9 @@ function bindPreview({
       return;
     }
 
-    video.src = URL.createObjectURL(file);
+    previewUrls[inputId] = URL.createObjectURL(file);
+    video.src = previewUrls[inputId];
+
     current.textContent = "00:00:00";
     duration.textContent = "loading...";
     start.value = "00:00:00";
