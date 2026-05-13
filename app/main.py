@@ -4,6 +4,7 @@ import asyncio
 import re
 import shutil
 import subprocess
+import sys
 import time
 import uuid
 from pathlib import Path
@@ -113,7 +114,7 @@ async def create_mosh(
         await save_upload(clip_b, clip_b_path)
 
         command = [
-            "python3",
+            sys.executable,
             str(ROOT / "mosh.py"),
             "--clip-a",
             str(clip_a_path),
